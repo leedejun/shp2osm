@@ -5,25 +5,22 @@ FLAGS  = -O3 -std=c99 -Wall -g -pedantic
 SRC    = shp2osm.c
 OBJ    = $(SRC:.c=.o)
 
+quadtree_dir = quadtree
+shapelib_dir = shapelib
+
+INCLUDE = -I$(quadtree_dir)/src -I$(shapelib_dir)
+
+LDFLAGS = -L$(quadtree_dir)/build -lquadtree -L$(shapelib_dir) -lshp
+
 all: shp2osm
 
-quardtree/build/libquadtree.a: $(OBJ)
-	@mkdir -p build
-	@$(AR) rcs $@ $^
-
-shapelib/libshp.a: $(OBJ)
-	@mkdir -p build
-	@$(AR) rcs $@ $^
-
 clean:
-	@rm -fr bin build *.o src/*.o
+	@rm -f *.o shp2osm
 
 %.o: %.c
-	@$(CC) $< $(FLAGS) -c -o $@
+	@$(CC) $< $(FLAGS) $(INCLUDE) -c -o $@
 
-shp2osm: *.c $(OBJ)
-	@mkdir -p bin
-	@$(CC) $^ -o bin/$@
-	@bin/$@
+shp2osm: $(OBJ)
+	@$(CC) $< -o $@ $(LDFLAGS)
 
 .PHONY: shp2osm clean

@@ -1,0 +1,6 @@
+[submodule "shapelib"]
+	path = shapelib
+	url = https://github.com/sw897/shapelib.git
+[submodule "quadtree"]
+	path = quadtree
+	url = https://github.com/sw897/quadtree.git
