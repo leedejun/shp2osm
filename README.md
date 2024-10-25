@@ -2,6 +2,8 @@
 
 Convert ESRI Shapefile to OpenStreeMap XML Format.
 
+This repo fork from https://github.com/sw897/shp2osm.
+
 ---
 
 ### Dependency
