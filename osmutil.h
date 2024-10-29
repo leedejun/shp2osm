@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <sstream>
 #include "osmtag.h"
+#include "bbox.h"
 
 class osmutil {
 public:
@@ -16,6 +17,10 @@ public:
    std::string getHighway(const std::string& key);
    std::string getDirection(const std::string& key);
    osmtag shpFieldValue2osmtag(const std::string& fieldName, const std::string& value);
+
+   bbox getMergeBox(const std::vector<std::string>& shpFiles);
+//    int shpfile2osmfile(char* inputfile, char* outputfile, std::FILE* fp_point, quadtree_t* tree, int wayStartId, int pointStartId);
+
 
 protected:
     void init();

@@ -4,6 +4,8 @@
 #include <locale>
 #include <regex>
 #include <iostream>
+#include "shapefil.h"
+#include "quadtree.h"
 
 
 osmutil* osmutil:: m_instance=nullptr;
@@ -132,8 +134,148 @@ osmtag osmutil::shpFieldValue2osmtag(const std::string& fieldName, const std::st
     }
     else
     {
-        tag.key = fieldName;
-        tag.value = value;
+        // tag.key = fieldName;
+        // tag.value = value;
     }
     return tag;
 }
+
+bbox osmutil::getMergeBox(const std::vector<std::string>& shpFiles)
+{
+    bbox sumbox = bbox();
+    double zero = 0.000000001;
+    for (size_t i = 0; i < shpFiles.size(); i++)
+    {
+        double adfMinBound[4], adfMaxBound[4];
+        std::string shpfile=shpFiles.at(i);
+        int nShapeType, nWays;
+        SHPHandle hWaySHP = SHPOpen(shpfile.c_str(), "rb");
+        if (!hWaySHP) {
+            std::cout << "Unable to open: " << shpfile << std::endl;
+            continue;
+        }
+
+        SHPGetInfo(hWaySHP, &nWays, &nShapeType, adfMinBound, adfMaxBound);
+        bbox box = bbox(adfMinBound[0] - zero, adfMinBound[1] - zero, adfMaxBound[0] + zero, adfMaxBound[1] + zero);
+        if (i==0)
+        {
+            sumbox=box;
+        }
+        else{
+            sumbox.merge(box);
+        }
+        SHPClose(hWaySHP);
+    }
+
+    return sumbox;
+}
+
+// int osmutil::shpfile2osmfile(char* inputfile, char* outputfile, std::FILE* fp_point, quadtree_t* tree, int wayStartId, int pointStartId)
+// {
+//     if (inputfile==nullptr || outputfile==nullptr 
+//     || fp_point==nullptr || tree==nullptr 
+//     || wayStartId<=0 || pointStartId<=0)
+//     {
+//         std::cout << "input param is error." << std::endl;
+//         return 1;
+//     }
+    
+
+//     SHPHandle hWaySHP;
+//     DBFHandle hWayDBF;
+//     int nShapeType, nWays, dbfCount, nWidth, nDecimals;
+//     double adfMinBound[4], adfMaxBound[4];
+//     char szTitle[50];
+
+//     point_t* point = nullptr;
+//     int point_num = pointStartId;
+//     int* point_id = nullptr;
+//     double zero = 0.000000001;
+
+//     const char* tempfile = "temp";
+//     hWaySHP = SHPOpen(inputfile, "rb");
+//     if (!hWaySHP) {
+//         std::cout << "Unable to open:" << inputfile << std::endl;
+//         return 1;
+//     }
+
+//     hWayDBF = DBFOpen(inputfile, "rb");
+//     if (!hWayDBF) {
+//         std::cout << "DBFOpen(" << inputfile << ",\"r\") failed." << std::endl;
+//         return 2;
+//     }
+
+//     SHPGetInfo(hWaySHP, &nWays, &nShapeType, adfMinBound, adfMaxBound);
+//     dbfCount = DBFGetRecordCount(hWayDBF);
+//     if (dbfCount != nWays) {
+//         std::cout << "dbf number error " << std::endl;
+//         return 1;
+//     }
+
+//     fp_way = std::fopen(tempfile, "w");
+
+//     for (int i = 0; i < nWays; i++) {
+//         int j;
+//         SHPObject* psShape;
+//         psShape = SHPReadObject(hWaySHP, i);
+//         if (!psShape) {
+//             std::fprintf(stderr, "Unable to read shape %d, terminating object reading.\n", i);
+//             break;
+//         }
+
+//         std::fprintf(fp_way, "  <way id=\"%d\" version=\"1\" visible=\"true\" >\n", i + wayStartId);
+//         for (j = 0; j < psShape->nVertices; j++) {
+//             point_id = new int;
+//             *point_id = point_num;
+//             point = quadtree_insert(tree, psShape->padfX[j], psShape->padfY[j], point_id, false);
+//             if (!point) {
+//                 std::cout << "lat=\"" << psShape->padfY[j] << "\" lon=\"" << psShape->padfX[j] << "\" insert error " << std::endl;
+//                 continue;
+//             }
+//             if (*(int*)point->key == point_num) {
+//                 std::fprintf(fp_point, "  <node id=\"%d\"  version=\"1\" visible=\"true\" lat=\"%f\" lon=\"%f\"/>\n", *(int*)point->key, point->y, point->x);
+//                 point_num++;
+//             }
+//             std::fprintf(fp_way, "    <nd ref=\"%d\"/>\n", *(int*)point->key);
+//         }
+//         SHPDestroyObject(psShape);
+
+//         for (j = 0; j < DBFGetFieldCount(hWayDBF); j++) {
+//             DBFFieldType eType;
+//             eType = DBFGetFieldInfo(hWayDBF, j, szTitle, &nWidth, &nDecimals);
+//             if (eType == FTString) {
+//                 std::string fieldName = szTitle;
+//                 std::string value = DBFReadStringAttribute(hWayDBF, i, j);
+//                 osmtag tag = osmutil::Instance()->shpFieldValue2osmtag(fieldName, value);
+//                 if (tag.key!="")
+//                 {
+//                     std::fprintf(fp_way, "    <tag k=\"%s\" v=\"%s\"/>\n", tag.key.c_str(), tag.value.c_str());
+//                 }
+//             } else if (eType == FTInteger) {
+//                 std::fprintf(fp_way, "    <tag k=\"%s\" v=\"%d\"/>\n", szTitle, DBFReadIntegerAttribute(hWayDBF, i, j));
+//             } else if (eType == FTDouble) {
+//                 std::fprintf(fp_way, "    <tag k=\"%s\" v=\"%lf\"/>\n", szTitle, DBFReadDoubleAttribute(hWayDBF, i, j));
+//             }
+//         }
+//         std::fprintf(fp_way, "  </way>\n");
+//     }
+
+//     SHPClose(hWaySHP);
+//     DBFClose(hWayDBF);
+
+//     std::fclose(fp_way);
+//     fp_way = nullptr;
+
+//     {
+//         char c;
+//         fp_way = std::fopen(tempfile, "r");
+//         while ((c = std::fgetc(fp_way)) != EOF) {
+//             std::fputc(c, fp_point);
+//         }
+//         std::fclose(fp_way);
+//         fp_way = nullptr;
+//         std::remove(tempfile);
+//     }
+
+//     return 0;
+// }
